@@ -1,0 +1,4 @@
+funshun1 is integer_thirty_two be equal to main left_bracket argc is integer_thirty_two right_bracket left_parenthesis
+    let variable is integer_thirty_two be equal to left_brace 1 plus 1 right_brace times 0 semicolon
+    in the case that variable do return 5 semicolon or do return 6 semicolon
+right_parenthesis
