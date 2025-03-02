@@ -27,7 +27,7 @@ fn compile(input: &str, output_file: &str) -> Result<(), errors::Error> {
     let mut ir_generator = ir::IRGenerator::new();
     let program = ir_generator.generate_ir(program)?;
 
-    println!("{:#?}", program);
+    //println!("{:#?}", program);
 
     let context = llvm_gen::LLVMGenerator::create_context();
     let llvm_gen = llvm_gen::LLVMGenerator::new(&context, &symbol_table);

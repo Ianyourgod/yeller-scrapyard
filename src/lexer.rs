@@ -75,7 +75,7 @@ pub enum Keyword {
 impl ToString for Keyword {
     fn to_string(&self) -> String {
         match self {
-            Keyword::Fn => "funshun",
+            Keyword::Fn => "function",
             Keyword::Is => "is",
             Keyword::Numbered => "numbered",
             Keyword::Shall => "shall",
@@ -190,7 +190,7 @@ impl<'a> Lexer<'a> {
                 }
 
                 match identifier {
-                    "funshun" => TokenKind::Keyword(Keyword::Fn),
+                    "function" => TokenKind::Keyword(Keyword::Fn),
                     "is" => TokenKind::Keyword(Keyword::Is),
                     "shall" => TokenKind::Keyword(Keyword::Shall),
                     "be" => TokenKind::Keyword(Keyword::Be),

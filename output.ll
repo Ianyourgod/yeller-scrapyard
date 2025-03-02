@@ -15,16 +15,16 @@ entry:
 
 define i32 @fib(i32 %0) {
 entry:
-  %.tmp.10 = alloca i32, align 4
-  %.tmp.4 = alloca i32, align 4
-  %count = alloca i32, align 4
-  %friendly = alloca i32, align 4
-  %.tmp.9 = alloca i32, align 4
-  %.tmp.3 = alloca i32, align 4
-  %.tmp.1 = alloca i32, align 4
   %.tmp.6 = alloca i32, align 4
+  %.tmp.3 = alloca i32, align 4
   %.tmp.7 = alloca i32, align 4
+  %.tmp.9 = alloca i32, align 4
+  %count = alloca i32, align 4
+  %.tmp.4 = alloca i32, align 4
   %.tmp.8 = alloca i32, align 4
+  %.tmp.10 = alloca i32, align 4
+  %.tmp.1 = alloca i32, align 4
+  %friendly = alloca i32, align 4
   %count1 = alloca i32, align 4
   store i32 %0, i32* %count1, align 4
   store i32 0, i32* %friendly, align 4

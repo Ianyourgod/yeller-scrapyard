@@ -25,18 +25,18 @@ fib:
 	subq	$56, %rsp
 	.cfi_def_cfa_offset 64
 	movl	%edi, 12(%rsp)
-	movl	$0, 40(%rsp)
+	movl	$0, 20(%rsp)
 	xorl	%eax, %eax
 	testl	%edi, %edi
 	sete	%al
-	movl	%eax, 28(%rsp)
+	movl	%eax, 24(%rsp)
 	je	.LBB1_2
 	movl	12(%rsp), %eax
 	xorl	%ecx, %ecx
 	addl	$-1, %eax
-	movl	%eax, 32(%rsp)
+	movl	%eax, 44(%rsp)
 	sete	%cl
-	movl	%ecx, 44(%rsp)
+	movl	%ecx, 36(%rsp)
 	jne	.LBB1_3
 .LBB1_2:
 	movl	$1, %eax
@@ -47,16 +47,16 @@ fib:
 	.cfi_def_cfa_offset 64
 	movl	12(%rsp), %edi
 	addl	$-1, %edi
-	movl	%edi, 24(%rsp)
+	movl	%edi, 48(%rsp)
 	callq	fib@PLT
 	movl	%eax, 16(%rsp)
 	movl	12(%rsp), %edi
 	addl	$-2, %edi
-	movl	%edi, 20(%rsp)
+	movl	%edi, 32(%rsp)
 	callq	fib@PLT
-	movl	%eax, 36(%rsp)
+	movl	%eax, 40(%rsp)
 	addl	16(%rsp), %eax
-	movl	%eax, 48(%rsp)
+	movl	%eax, 28(%rsp)
 	addq	$56, %rsp
 	.cfi_def_cfa_offset 8
 	retq

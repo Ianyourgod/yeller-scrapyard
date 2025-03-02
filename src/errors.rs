@@ -32,7 +32,7 @@ pub enum ErrorKind {
         found: String,
     },
     UnexpectedEOF,
-    WrongFunshunCount {
+    WrongfunctionCount {
         expected: u64,
         found: u64,
     },
@@ -65,7 +65,7 @@ impl ErrorKind {
             Self::UnexpectedEOF => {
                 "Why the hell is there an EOF here".to_string()
             }
-            Self::WrongFunshunCount { expected, found } => {
+            Self::WrongfunctionCount { expected, found } => {
                 let expected = *expected;
                 let found = *found;
 
@@ -204,8 +204,8 @@ mod tests {
     }
 
     #[test]
-    fn test_wrong_funshun_count() {
-        test_error("error_examples/wrong_fn_count.yl", ErrorKind::WrongFunshunCount {
+    fn test_wrong_function_count() {
+        test_error("error_examples/wrong_fn_count.yl", ErrorKind::WrongfunctionCount {
             expected: 1,
             found: 2,
         });

@@ -6,14 +6,14 @@ pub mod nodes;
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
-    funshun_counter: u64,
+    function_counter: u64,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Result<Self, errors::Error> {
         let mut lexer = Lexer::new(input);
         let current_token = lexer.next_token()?;
-        Ok(Self { lexer, current_token, funshun_counter: 1 })
+        Ok(Self { lexer, current_token, function_counter: 1 })
     }
 
     pub fn parse_program(&mut self) -> Result<nodes::Program, errors::Error> {
@@ -96,14 +96,14 @@ impl<'a> Parser<'a> {
         };
         self.next()?;
 
-        if num != self.funshun_counter {
-            return Err(errors::Error::new(errors::ErrorKind::WrongFunshunCount {
-                expected: self.funshun_counter,
+        if num != self.function_counter {
+            return Err(errors::Error::new(errors::ErrorKind::WrongfunctionCount {
+                expected: self.function_counter,
                 found: num,
             }, self.current_token.line));
         }
 
-        self.funshun_counter += 1;
+        self.function_counter += 1;
 
         self.expect_keyword(Keyword::Is)?;
         let return_type = self.parse_type()?;
@@ -336,7 +336,7 @@ impl<'a> Parser<'a> {
                 return Ok(nodes::Expression { kind: nodes::ExpressionKind::Variable(name), line_started, ty: nodes::Type::I32 });
             }
             TokenKind::Keyword(Keyword::I) => {
-                // i shall inkove the funshun named {name} and it shall take the parameters left_brace abc_expr comma def_expr .. right_brace
+                // i shall inkove the function named {name} and it shall take the parameters left_brace abc_expr comma def_expr .. right_brace
                 let line_started = self.current_token.line;
                 self.next()?;
                 self.expect_keyword(Keyword::Shall)?;
