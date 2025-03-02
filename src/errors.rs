@@ -47,6 +47,7 @@ pub enum ErrorKind {
     ShortVarName(String),
     LongFuncName(String),
     InvalidAssignmentTarget,
+    TypeError,
 }
 
 impl ErrorKind {
@@ -104,6 +105,9 @@ impl ErrorKind {
             }
             Self::InvalidAssignmentTarget => {
                 "Bro WHAT are you trying to assign to 💔".to_string()
+            }
+            Self::TypeError => {
+                "Dude how did you manage to get a fucking type error in this bullshit language".to_string()
             }
         };
 

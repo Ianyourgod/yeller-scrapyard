@@ -7,6 +7,7 @@ use std::{collections::HashMap, process::Command};
 mod var_collecter;
 
 use crate::ir::definition;
+use crate::semantic_analysis::typecheck::SymbolTable;
 
 pub struct LLVMGenerator<'a> {
     symbol_table: HashMap<String, inkwell::values::PointerValue<'a>>,
@@ -14,6 +15,7 @@ pub struct LLVMGenerator<'a> {
     context: &'a inkwell::context::Context,
     module: inkwell::module::Module<'a>,
     current_function: String,
+    frontend_symbol_table: &'a SymbolTable,
 }
 
 impl<'a> LLVMGenerator<'a> {
@@ -21,7 +23,7 @@ impl<'a> LLVMGenerator<'a> {
         Context::create()
     }
 
-    pub fn new(context: &'a Context) -> Self {
+    pub fn new(context: &'a Context, frontend_symbol_table: &'a SymbolTable) -> Self {
         let module = context.create_module("main");
         Self {
             symbol_table: HashMap::new(),
@@ -29,6 +31,7 @@ impl<'a> LLVMGenerator<'a> {
             context,
             module,
             current_function: String::new(),
+            frontend_symbol_table,
         }
     }
 
@@ -213,12 +216,12 @@ impl<'a> LLVMGenerator<'a> {
 
         let fpm = PassManager::create(&self.module);
 
-        fpm.add_instruction_combining_pass();
-        fpm.add_reassociate_pass();
-        fpm.add_gvn_pass();
-        fpm.add_cfg_simplification_pass();
-        fpm.add_basic_alias_analysis_pass();
-        fpm.add_promote_memory_to_register_pass();
+        //fpm.add_instruction_combining_pass();
+        //fpm.add_reassociate_pass();
+        //fpm.add_gvn_pass();
+        //fpm.add_cfg_simplification_pass();
+        //fpm.add_basic_alias_analysis_pass();
+        //fpm.add_promote_memory_to_register_pass();
 
         fpm.initialize();
 
@@ -227,7 +230,7 @@ impl<'a> LLVMGenerator<'a> {
         fpm.finalize();
     }
 
-    fn generate_instruction(&mut self, builder: &inkwell::builder::Builder<'a>, instruction: definition::Instruction) {
+    fn generate_instruction(&mut self, builder: &inkwell::builder::Builder<'a>, instruction: definition::Instruction, ) {
         match instruction {
             definition::Instruction::Return(val) => {
                 let return_val = self.val_to_base(val, builder);
@@ -291,6 +294,11 @@ impl<'a> LLVMGenerator<'a> {
                         };
                         builder.build_store(dest_val, result).expect("uh oh");
                     }
+                    definition::Binop::Equal => {
+                        let result = builder.build_int_compare(inkwell::IntPredicate::EQ, src1_val.into_int_value(), src2_val.into_int_value(), "equal").expect("uh oh");
+                        let result = builder.build_int_z_extend(result, self.context.i32_type(), "extend").expect("uh oh");
+                        builder.build_store(dest_val, result).expect("uh oh");
+                    }
                 }
             }
             definition::Instruction::Copy { src, dst } => {
@@ -327,6 +335,38 @@ impl<'a> LLVMGenerator<'a> {
                 let block = self.get_block(&label);
                     builder.build_unconditional_branch(block).expect("uh oh");
                 builder.position_at_end(block);
+            }
+            definition::Instruction::FunctionCall(name, args, dst) => {
+                let function = match self.module.get_function(&name) {
+                    Some(f) => f,
+                    None => {
+                        let entry = self.frontend_symbol_table.get(&name).expect("Function not found");
+                        let (param_types, ret_type) = match &entry.ty {
+                            definition::Type::Function(params, ret) => (params, ret),
+                            _ => unreachable!("uh oh")
+                        };
+                        let linkage = if true { // is global
+                            inkwell::module::Linkage::External
+                        } else {
+                            inkwell::module::Linkage::ExternalWeak
+                        };
+
+                        let param_types = param_types.iter().map(|ty| self.get_metadata_type(ty)).collect::<Vec<_>>();
+
+                        let ret_type = self.ty_to_llvm_ty(&ret_type);
+
+                        let fn_type = ret_type.fn_type(&param_types, false);
+
+                        self.module.add_function(&name, fn_type, Some(linkage))
+                    }
+                };
+                let mut arg_vals = Vec::new();
+                for arg in args {
+                    arg_vals.push(self.val_to_base(arg, builder).into())
+                }
+                let dest_val = self.get_ptr_from_val(dst);
+                let result = builder.build_call(function, &arg_vals, "call").expect("uh oh");
+                builder.build_store(dest_val, result.try_as_basic_value().left().unwrap()).expect("uh oh");
             }
         }
     }

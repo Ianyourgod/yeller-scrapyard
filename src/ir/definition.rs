@@ -32,6 +32,7 @@ pub enum Instruction {
     Jump(String),
     JumpIfZero(Val, String),
     JumpIfNotZero(Val, String),
+    FunctionCall(String, Vec<Val>, Val),
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +42,7 @@ pub enum Binop {
     Mul,
     Div,
     Mod,
+    Equal,
 }
 
 #[derive(Debug, Clone)]

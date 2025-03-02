@@ -37,6 +37,12 @@ impl Collector {
             definition::Instruction::JumpIfNotZero(val, ..) => {
                 self.collect_val(val);
             }
+            definition::Instruction::FunctionCall(_, args, dst) => {
+                for arg in args {
+                    self.collect_val(arg);
+                }
+                self.collect_val(dst);
+            }
             definition::Instruction::Jump(_) |
             definition::Instruction::Label(_) => {}
         }

@@ -270,6 +270,7 @@ impl<'a> Parser<'a> {
                     left = nodes::Expression {
                         kind: nodes::ExpressionKind::Assign(Box::new(left), Box::new(right)),
                         line_started,
+                        ty: nodes::Type::I32
                     };
 
                     prec = self.get_prec(&self.current_token.kind);
@@ -285,6 +286,7 @@ impl<'a> Parser<'a> {
             left = nodes::Expression {
                 kind: nodes::ExpressionKind::Binary(op, Box::new(left), Box::new(right)),
                 line_started,
+                ty: nodes::Type::I32
             };
 
             prec = self.get_prec(&self.current_token.kind);
@@ -304,6 +306,7 @@ impl<'a> Parser<'a> {
                     nodes::Expression {
                         kind: nodes::ExpressionKind::IsZero(Box::new(inner)),
                         line_started,
+                        ty: nodes::Type::I32
                     }
                 } else {
                     inner
@@ -318,7 +321,7 @@ impl<'a> Parser<'a> {
             TokenKind::Number(n) => {
                 let line_started = self.current_token.line;
                 self.next()?;
-                Ok(nodes::Expression { kind: nodes::ExpressionKind::Number(n), line_started })
+                Ok(nodes::Expression { kind: nodes::ExpressionKind::Number(n), line_started, ty: nodes::Type::I32 })
             }
             TokenKind::LBrace => {
                 self.next()?;
@@ -330,7 +333,48 @@ impl<'a> Parser<'a> {
                 let name = name.clone();
                 let line_started = self.current_token.line;
                 self.next()?;
-                Ok(nodes::Expression { kind: nodes::ExpressionKind::Variable(name), line_started })
+                return Ok(nodes::Expression { kind: nodes::ExpressionKind::Variable(name), line_started, ty: nodes::Type::I32 });
+            }
+            TokenKind::Keyword(Keyword::I) => {
+                // i shall inkove the funshun named {name} and it shall take the parameters left_brace abc_expr comma def_expr .. right_brace
+                let line_started = self.current_token.line;
+                self.next()?;
+                self.expect_keyword(Keyword::Shall)?;
+                self.expect_keyword(Keyword::Invoke)?;
+                self.expect_keyword(Keyword::The)?;
+                self.expect_keyword(Keyword::Fn)?;
+                self.expect_keyword(Keyword::Named)?;
+                let fun_name = if let TokenKind::Identifier(name) = &self.current_token.kind {
+                    name.clone()
+                } else {
+                    return Err(errors::Error::new(errors::ErrorKind::UnexpectedToken {
+                        expected: "an identifier".to_string(),
+                        found: self.current_token.kind.to_string(),
+                    }, self.current_token.line));
+                };
+                self.next()?;
+                self.expect(TokenKind::Keyword(Keyword::And))?;
+                self.expect_keyword(Keyword::It)?;
+                self.expect_keyword(Keyword::Shall)?;
+                self.expect_keyword(Keyword::Take)?;
+                self.expect_keyword(Keyword::The)?;
+                self.expect_keyword(Keyword::Parameters)?;
+                self.expect(TokenKind::LBrace)?;
+                let mut args = Vec::new();
+                if self.current_token.kind != TokenKind::RBrace {
+                    args.push(self.parse_expression(0)?);
+                    while self.current_token.kind == TokenKind::Comma {
+                        self.next()?;
+                        args.push(self.parse_expression(0)?);
+                    }
+                }
+                self.expect(TokenKind::RBrace)?;
+
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::FunctionCall(fun_name, args),
+                    line_started: line_started,
+                    ty: nodes::Type::I32
+                })
             }
             _ => Err(errors::Error::new(errors::ErrorKind::UnexpectedToken {
                 expected: "a factor".to_string(),

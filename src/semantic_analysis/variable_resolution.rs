@@ -22,6 +22,10 @@ impl Analyzer {
     }
 
     pub fn analyze_program(&mut self, mut program: nodes::Program) -> Result<nodes::Program, errors::Error> {
+        program.functions.iter().map(|function| {
+            self.preanalyze_function(function)
+        }).collect::<Result<Vec<_>, _>>()?;
+        
         let new_functions = program.functions.into_iter().map(|function| self.analyze_function(function)).collect::<Result<Vec<_>, _>>()?;
 
         program.functions = new_functions;
@@ -29,13 +33,17 @@ impl Analyzer {
         Ok(program)
     }
 
-    fn analyze_function(&mut self, function: nodes::FunctionDefinition) -> Result<nodes::FunctionDefinition, errors::Error> {
+    fn preanalyze_function(&mut self, function: &nodes::FunctionDefinition) -> Result<(), errors::Error> {
         self.var_map.insert(function.name.clone(), VarMapEntry { ty: nodes::Type::Function(function.params.iter().map(|(_, ty)| ty.clone()).collect(), Box::new(function.return_type.clone())) });
 
         if function.name.len() > 4 {
-            return Err(errors::Error::new(errors::ErrorKind::LongFuncName(function.name), function.line_started));
+            return Err(errors::Error::new(errors::ErrorKind::LongFuncName(function.name.clone()), function.line_started));
         }
 
+        Ok(())
+    }
+
+    fn analyze_function(&mut self, function: nodes::FunctionDefinition) -> Result<nodes::FunctionDefinition, errors::Error> {
         self.variables_this_function = 0;
 
         for (name, ty) in &function.params {
@@ -156,13 +164,14 @@ impl Analyzer {
     fn analyze_expression(&mut self, expression: nodes::Expression) -> Result<nodes::Expression, errors::Error> {
         match expression.kind {
             nodes::ExpressionKind::Number(_) => Ok(expression),
-            nodes::ExpressionKind::Binary(op, lhs, rhs) => {
-                let new_lhs = self.analyze_expression(*lhs)?;
-                let new_rhs = self.analyze_expression(*rhs)?;
+            nodes::ExpressionKind::Binary(op, left, right) => {
+                let new_left = self.analyze_expression(*left)?;
+                let new_right = self.analyze_expression(*right)?;
 
                 Ok(nodes::Expression {
-                    kind: nodes::ExpressionKind::Binary(op, Box::new(new_lhs), Box::new(new_rhs)),
+                    kind: nodes::ExpressionKind::Binary(op, Box::new(new_left), Box::new(new_right)),
                     line_started: expression.line_started,
+                    ty: expression.ty,
                 })
             }
             nodes::ExpressionKind::Variable(name) => {
@@ -173,6 +182,7 @@ impl Analyzer {
                 Ok(nodes::Expression {
                     kind: nodes::ExpressionKind::Variable(name),
                     line_started: expression.line_started,
+                    ty: expression.ty,
                 })
             }
             nodes::ExpressionKind::Assign(left, right) => {
@@ -191,6 +201,7 @@ impl Analyzer {
                 Ok(nodes::Expression {
                     kind: nodes::ExpressionKind::Assign(Box::new(new_left), Box::new(new_right)),
                     line_started: expression.line_started,
+                    ty: expression.ty,
                 })
             }
             nodes::ExpressionKind::IsZero(expr) => {
@@ -199,6 +210,20 @@ impl Analyzer {
                 Ok(nodes::Expression {
                     kind: nodes::ExpressionKind::IsZero(Box::new(new_expr)),
                     line_started: expression.line_started,
+                    ty: expression.ty,
+                })
+            }
+            nodes::ExpressionKind::FunctionCall(name, args) => {
+                if !self.var_map.contains_key(&name) {
+                    return Err(errors::Error::new(errors::ErrorKind::VariableNotDeclared(name), expression.line_started));
+                }
+
+                let new_args = args.into_iter().map(|arg| self.analyze_expression(arg)).collect::<Result<Vec<_>, _>>()?;
+
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::FunctionCall(name, new_args),
+                    line_started: expression.line_started,
+                    ty: expression.ty,
                 })
             }
         }

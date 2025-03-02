@@ -65,16 +65,17 @@ impl IRGenerator {
             nodes::StatementKind::If(val, block, else_block) => {
                 let val = self.generate_expression(val, body)?;
                 let label = self.new_tmp();
-                let end_label = self.new_tmp();
 
                 body.push(definition::Instruction::JumpIfZero(val, label.clone()));
                 self.generate_statement(*block, body)?;
-                body.push(definition::Instruction::Jump(end_label.clone()));
                 body.push(definition::Instruction::Label(label));
-                if let Some(else_block) = else_block {
-                    self.generate_statement(*else_block, body)?;
+
+                if let Some(block) = else_block {
+                    let end_label = self.new_tmp();
+                    body.push(definition::Instruction::Jump(end_label.clone()));
+                    self.generate_statement(*block, body)?;
+                    body.push(definition::Instruction::Label(end_label));
                 }
-                body.push(definition::Instruction::Label(end_label));
             }
             nodes::StatementKind::While(val, block) => {
                 let label = self.new_tmp();
@@ -147,19 +148,20 @@ impl IRGenerator {
                 let val = self.generate_expression(*expr, body)?;
                 let dst = definition::Val::Var(self.new_tmp());
 
-                body.push(definition::Instruction::Copy {
-                    src: definition::Val::Number(0),
+                body.push(definition::Instruction::Binary {
+                    op: definition::Binop::Equal,
+                    src1: val,
+                    src2: definition::Val::Number(0),
                     dst: dst.clone(),
                 });
 
-                let label = self.new_tmp();
+                Ok(dst)
+            }
+            nodes::ExpressionKind::FunctionCall(name, args) => {
+                let args = args.into_iter().map(|arg| self.generate_expression(arg, body)).collect::<Result<Vec<_>, _>>()?;
+                let dst = definition::Val::Var(self.new_tmp());
 
-                body.push(definition::Instruction::JumpIfNotZero(val, label.clone()));
-                body.push(definition::Instruction::Copy {
-                    src: definition::Val::Number(1),
-                    dst: dst.clone(),
-                });
-                body.push(definition::Instruction::Label(label));
+                body.push(definition::Instruction::FunctionCall(name, args, dst.clone()));
 
                 Ok(dst)
             }

@@ -53,6 +53,7 @@ pub enum StatementKind {
 pub struct Expression {
     pub kind: ExpressionKind,
     pub line_started: usize,
+    pub ty: Type,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +63,7 @@ pub enum ExpressionKind {
     Variable(String),
     Assign(Box<Expression>, Box<Expression>),
     IsZero(Box<Expression>),
+    FunctionCall(String, Vec<Expression>),
 }
 
 #[derive(Debug, Clone)]
