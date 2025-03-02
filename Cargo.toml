@@ -1,7 +1,15 @@
 [package]
 name = "yeller"
 version = "0.1.0"
-edition = "2021"
+authors = ["Ianyourgod <ianyourgod@gmail.com>"]
+license = "MIT"
+description = "The best programming language ever."
+readme = "README.md"
+homepage = "https://github.com/ianyourgod/yeller-scrapyard"
+repository = "https://github.com/ianyourgod/yeller-scrapyard"
+keywords = ["compiler", "programming-language", "llvm", "scrapyard", "yeller"]
+categories = ["compilers"]
+
 
 [dependencies]
 inkwell = { version = "0.5.0", features = ["llvm14-0"] }
