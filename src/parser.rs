@@ -6,13 +6,14 @@ pub mod nodes;
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
+    funshun_counter: u64,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(input: &'a str) -> Result<Self, errors::Error> {
         let mut lexer = Lexer::new(input);
         let current_token = lexer.next_token()?;
-        Ok(Self { lexer, current_token })
+        Ok(Self { lexer, current_token, funshun_counter: 1 })
     }
 
     pub fn parse_program(&mut self) -> Result<nodes::Program, errors::Error> {
@@ -32,6 +33,10 @@ impl<'a> Parser<'a> {
         if self.current_token.kind == kind {
             self.next()
         } else {
+            if self.current_token.kind == TokenKind::EOF {
+                return Err(errors::Error::new(errors::ErrorKind::UnexpectedEOF, self.current_token.line));
+            }
+
             Err(errors::Error::new(errors::ErrorKind::UnexpectedToken {
                 expected: kind.to_string(),
                 found: self.current_token.kind.to_string(),
@@ -72,9 +77,32 @@ impl<'a> Parser<'a> {
 
     fn parse_function_definition(&mut self) -> Result<nodes::FunctionDefinition, errors::Error> {
         let line_started = self.current_token.line;
+        self.expect_keyword(Keyword::The)?;
         self.expect_keyword(Keyword::Fn)?;
+        self.expect_keyword(Keyword::Numbered)?;
+        
+        let num = if let TokenKind::Number(num) = self.current_token.kind {
+            num
+        } else {
+            return Err(errors::Error::new(errors::ErrorKind::UnexpectedToken {
+                expected: "a number".to_string(),
+                found: self.current_token.kind.to_string(),
+            }, self.current_token.line));
+        };
+        self.next()?;
+
+        if num != self.funshun_counter {
+            return Err(errors::Error::new(errors::ErrorKind::WrongFunshunCount {
+                expected: self.funshun_counter,
+                found: num,
+            }, self.current_token.line));
+        }
+
+        self.funshun_counter += 1;
+
         self.expect_keyword(Keyword::Is)?;
         let return_type = self.parse_type()?;
+        self.expect_keyword(Keyword::Shall)?;
         self.expect_keyword(Keyword::Be)?;
         self.expect_keyword(Keyword::Equal)?;
         self.expect_keyword(Keyword::To)?;
@@ -120,14 +148,19 @@ impl<'a> Parser<'a> {
 
     fn parse_block_item(&mut self) -> Result<nodes::BlockItem, errors::Error> {
         match self.current_token.kind {
-            TokenKind::Keyword(Keyword::Let) => self.parse_declaration().map(nodes::BlockItem::Declaration),
+            TokenKind::Keyword(Keyword::I) => self.parse_declaration().map(nodes::BlockItem::Declaration),
             _ => self.parse_statement().map(nodes::BlockItem::Statement),
         }
     }
 
     fn parse_declaration(&mut self) -> Result<nodes::Declaration, errors::Error> {
         let line_started = self.current_token.line;
-        self.expect_keyword(Keyword::Let)?;
+        self.expect_keyword(Keyword::I)?;
+        self.expect_keyword(Keyword::Am)?;
+        self.expect_keyword(Keyword::Declaring)?;
+        self.expect_keyword(Keyword::A)?;
+        self.expect_keyword(Keyword::Variable)?;
+        self.expect_keyword(Keyword::Named)?;
         let name = if let TokenKind::Identifier(name) = &self.current_token.kind {
             name.clone()
         } else {
@@ -139,6 +172,7 @@ impl<'a> Parser<'a> {
         self.next()?;
         self.expect_keyword(Keyword::Is)?;
         let ty = self.parse_type()?;
+        self.expect_keyword(Keyword::Shall)?;
         self.expect_keyword(Keyword::Be)?;
         self.expect_keyword(Keyword::Equal)?;
         self.expect_keyword(Keyword::To)?;

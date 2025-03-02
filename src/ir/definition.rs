@@ -46,5 +46,5 @@ pub enum Binop {
 #[derive(Debug, Clone)]
 pub enum Val {
     Var(String),
-    Number(i64),
+    Number(u64),
 }

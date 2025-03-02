@@ -1,18 +1,34 @@
+use rand::Rng;
+
+mod formatting;
 mod lexer;
 mod parser;
+mod semantic_analysis;
 mod ir;
 mod llvm_gen;
 
 mod errors;
 
 fn compile(input: &str, output_file: &str) -> Result<(), errors::Error> {
+    // 1/5 chance to fail
+    if rand::rng().random_range(0..5) == 0 {
+        return Err(errors::Error::new(errors::ErrorKind::RandomChance, usize::MAX));
+    }
+
+    formatting::formatting_check(input)?;
+
     let mut parser = parser::Parser::new(input)?;
     let program = parser.parse_program()?;
+
+    let program = semantic_analysis::analyze(program)?;
+
     let mut ir_generator = ir::IRGenerator::new();
     let program = ir_generator.generate_ir(program)?;
+
     let context = llvm_gen::LLVMGenerator::create_context();
     let llvm_gen = llvm_gen::LLVMGenerator::new(&context);
     llvm_gen.generate(program, output_file);
+
     Ok(())
 }
 

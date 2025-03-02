@@ -349,7 +349,7 @@ impl<'a> LLVMGenerator<'a> {
             definition::Val::Number(value) => {
                 let ty = i32_type;
 
-                inkwell::values::BasicValueEnum::IntValue(ty.const_int(value as u64, true))
+                inkwell::values::BasicValueEnum::IntValue(ty.const_int(value, true))
             }
             definition::Val::Var(name) => {
                 // lookup the variable

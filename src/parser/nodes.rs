@@ -56,7 +56,7 @@ pub struct Expression {
 
 #[derive(Debug, Clone)]
 pub enum ExpressionKind {
-    Number(i64),
+    Number(u64),
     Binary(Binop, Box<Expression>, Box<Expression>),
     Variable(String),
 }
