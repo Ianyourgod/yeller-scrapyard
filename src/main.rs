@@ -1,5 +1,7 @@
 #![feature(box_patterns)]
 
+extern crate rand;
+extern crate inkwell;
 use rand::Rng;
 
 mod formatting;
