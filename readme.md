@@ -58,3 +58,7 @@ in the case that left_brace count minus 1 right_brace is zero do return 1 period
 return i shall invoke the function named fib and it shall take the parameters left_brace count minus 1 right_brace plus i shall invoke the function named fib and it shall take the parameters left_brace count minus 2 right_brace period
 right_parenthesis
 ```
+
+## Warning
+
+I made this in less than 24 hours. I think this is obvious but you should never, ever, ever make any real programs with this. There are so many bugs it's actually crazy.
