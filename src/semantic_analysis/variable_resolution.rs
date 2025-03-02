@@ -141,6 +141,15 @@ impl Analyzer {
                     line_started: statement.line_started,
                 })
             }
+            nodes::StatementKind::While(val, block) => {
+                let new_val = self.analyze_expression(val)?;
+                let new_block = self.analyze_statement(*block)?;
+
+                Ok(nodes::Statement {
+                    kind: nodes::StatementKind::While(new_val, Box::new(new_block)),
+                    line_started: statement.line_started,
+                })
+            }
         }
     }
 
@@ -181,6 +190,14 @@ impl Analyzer {
 
                 Ok(nodes::Expression {
                     kind: nodes::ExpressionKind::Assign(Box::new(new_left), Box::new(new_right)),
+                    line_started: expression.line_started,
+                })
+            }
+            nodes::ExpressionKind::IsZero(expr) => {
+                let new_expr = self.analyze_expression(*expr)?;
+
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::IsZero(Box::new(new_expr)),
                     line_started: expression.line_started,
                 })
             }

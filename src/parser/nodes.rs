@@ -46,6 +46,7 @@ pub enum StatementKind {
     Block(Block),
     Expression(Expression),
     If(Expression, Box<Statement>, Option<Box<Statement>>),
+    While(Expression, Box<Statement>),
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +61,7 @@ pub enum ExpressionKind {
     Binary(Binop, Box<Expression>, Box<Expression>),
     Variable(String),
     Assign(Box<Expression>, Box<Expression>),
+    IsZero(Box<Expression>),
 }
 
 #[derive(Debug, Clone)]

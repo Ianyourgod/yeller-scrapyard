@@ -2,6 +2,7 @@
 
 use crate::errors;
 
+#[derive(Debug, Clone)]
 pub struct Lexer<'a> {
     pub input: &'a str,
     line: usize,
@@ -61,6 +62,9 @@ pub enum Keyword {
     Named,
     Now,
     Period,
+    During,
+    Not,
+    Zero,
 }
 
 impl ToString for Keyword {
@@ -89,6 +93,9 @@ impl ToString for Keyword {
             Keyword::Named => "named".to_string(),
             Keyword::Now => "now".to_string(),
             Keyword::Period => "period".to_string(),
+            Keyword::During => "during".to_string(),
+            Keyword::Not => "not".to_string(),
+            Keyword::Zero => "zero".to_string(),
         }
     }
 }
@@ -196,6 +203,9 @@ impl<'a> Lexer<'a> {
                     "named" => TokenKind::Keyword(Keyword::Named),
                     "period" => TokenKind::Keyword(Keyword::Period),
                     "now" => TokenKind::Keyword(Keyword::Now),
+                    "during" => TokenKind::Keyword(Keyword::During),
+                    "not" => TokenKind::Keyword(Keyword::Not),
+                    "zero" => TokenKind::Keyword(Keyword::Zero),
 
                     "left_bracket" => TokenKind::LBracket,
                     "right_bracket" => TokenKind::RBracket,
@@ -220,5 +230,10 @@ impl<'a> Lexer<'a> {
             kind: token_kind,
             line,
         })
+    }
+
+    pub fn peek_token(&self) -> Result<Token, errors::Error> {
+        let mut lexer = self.clone();
+        lexer.next_token()
     }
 }

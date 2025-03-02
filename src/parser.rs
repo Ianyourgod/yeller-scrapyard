@@ -29,6 +29,11 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    fn peek(&self) -> Result<Token, errors::Error> {
+        let token = self.lexer.peek_token()?;
+        Ok(token) 
+    }
+
     fn expect(&mut self, kind: TokenKind) -> Result<(), errors::Error> {
         if self.current_token.kind == kind {
             self.next()
@@ -207,6 +212,19 @@ impl<'a> Parser<'a> {
                 };
                 nodes::Statement { kind: nodes::StatementKind::If(cond, block, else_block), line_started }
             }
+            TokenKind::Keyword(Keyword::During) => {
+                self.next()?;
+                self.expect_keyword(Keyword::The)?;
+                self.expect_keyword(Keyword::Period)?;
+                self.expect_keyword(Keyword::That)?;
+                let cond = self.parse_expression(0)?;
+                self.expect_keyword(Keyword::Is)?;
+                self.expect_keyword(Keyword::Not)?;
+                self.expect_keyword(Keyword::Zero)?;
+                self.expect_keyword(Keyword::Do)?;
+                let block = self.parse_statement()?;
+                nodes::Statement { kind: nodes::StatementKind::While(cond, Box::new(block)), line_started }
+            }
             TokenKind::LParen => {
                 let block = self.parse_block()?;
                 nodes::Statement { kind: nodes::StatementKind::Block(block), line_started }
@@ -275,6 +293,27 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_factor(&mut self) -> Result<nodes::Expression, errors::Error> {
+        let line_started = self.current_token.line;
+        let inner = self.parse_inner_factor()?;
+
+        Ok(match self.current_token.kind {
+            TokenKind::Keyword(Keyword::Is) => {
+                if self.peek()?.kind == TokenKind::Keyword(Keyword::Zero) {
+                    self.next()?;
+                    self.next()?;
+                    nodes::Expression {
+                        kind: nodes::ExpressionKind::IsZero(Box::new(inner)),
+                        line_started,
+                    }
+                } else {
+                    inner
+                }
+            }
+            _ => inner,
+        })
+    }
+
+    fn parse_inner_factor(&mut self) -> Result<nodes::Expression, errors::Error> {
         match self.current_token.kind {
             TokenKind::Number(n) => {
                 let line_started = self.current_token.line;

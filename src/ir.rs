@@ -76,6 +76,17 @@ impl IRGenerator {
                 }
                 body.push(definition::Instruction::Label(end_label));
             }
+            nodes::StatementKind::While(val, block) => {
+                let label = self.new_tmp();
+                let end_label = self.new_tmp();
+
+                body.push(definition::Instruction::Label(label.clone()));
+                let val = self.generate_expression(val, body)?;
+                body.push(definition::Instruction::JumpIfZero(val, end_label.clone()));
+                self.generate_statement(*block, body)?;
+                body.push(definition::Instruction::Jump(label));
+                body.push(definition::Instruction::Label(end_label));
+            }
         }
 
         Ok(())
@@ -131,6 +142,26 @@ impl IRGenerator {
                 });
 
                 Ok(left)
+            }
+            nodes::ExpressionKind::IsZero(expr) => {
+                let val = self.generate_expression(*expr, body)?;
+                let dst = definition::Val::Var(self.new_tmp());
+
+                body.push(definition::Instruction::Copy {
+                    src: definition::Val::Number(0),
+                    dst: dst.clone(),
+                });
+
+                let label = self.new_tmp();
+
+                body.push(definition::Instruction::JumpIfNotZero(val, label.clone()));
+                body.push(definition::Instruction::Copy {
+                    src: definition::Val::Number(1),
+                    dst: dst.clone(),
+                });
+                body.push(definition::Instruction::Label(label));
+
+                Ok(dst)
             }
             nodes::ExpressionKind::Variable(name) => Ok(definition::Val::Var(name)),
         }
