@@ -33,6 +33,14 @@ pub enum Instruction {
     JumpIfZero(Val, String),
     JumpIfNotZero(Val, String),
     FunctionCall(String, Vec<Val>, Val),
+    GetAddress(Val, Val),
+    Store(Val, Val),
+    Load(Val, Val),
+    AddPtr {
+        ptr: Val,
+        index: Val,
+        dst: Val,
+    }
 }
 
 #[derive(Debug, Clone)]

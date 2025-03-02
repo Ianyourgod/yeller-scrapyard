@@ -10,7 +10,7 @@ pub struct FunctionDefinition {
     pub name: String,
     pub params: Vec<(String, Type)>,
     pub return_type: Type,
-    pub body: Block,
+    pub body: Option<Block>,
     pub line_started: usize,
 }
 
@@ -49,14 +49,14 @@ pub enum StatementKind {
     While(Expression, Box<Statement>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
     pub kind: ExpressionKind,
     pub line_started: usize,
     pub ty: Type,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionKind {
     Number(u64),
     Binary(Binop, Box<Expression>, Box<Expression>),
@@ -64,9 +64,12 @@ pub enum ExpressionKind {
     Assign(Box<Expression>, Box<Expression>),
     IsZero(Box<Expression>),
     FunctionCall(String, Vec<Expression>),
+    AddressOf(Box<Expression>),
+    Dereference(Box<Expression>),
+    Subscript(Box<Expression>, Box<Expression>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Binop {
     Add,
     Sub,
@@ -78,5 +81,6 @@ pub enum Binop {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     I32,
+    Pointer(Box<Type>),
     Function(Vec<Type>, Box<Type>),
 }

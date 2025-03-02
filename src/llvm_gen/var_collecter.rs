@@ -1,14 +1,16 @@
 use std::collections::HashSet;
 
 use crate::ir::definition;
+use crate::semantic_analysis::typecheck::SymbolTable;
 
-pub struct Collector {
+pub struct Collector<'a> {
     pub variables: HashSet<(String, definition::Type)>,
+    pub frontend_symbol_table: &'a SymbolTable,
 }
 
-impl Collector {
-    pub fn new() -> Self {
-        Self { variables: HashSet::new() }
+impl<'a> Collector<'a> {
+    pub fn new(frontend_symbol_table: &'a SymbolTable) -> Self {
+        Self { variables: HashSet::new(), frontend_symbol_table }
     }
 
     pub fn collect_function(&mut self, function: &definition::Function) {
@@ -43,6 +45,22 @@ impl Collector {
                 }
                 self.collect_val(dst);
             }
+            definition::Instruction::GetAddress(_, val) => {
+                self.collect_val(val);
+            }
+            definition::Instruction::Store(val1, val2) => {
+                self.collect_val(val1);
+                self.collect_val(val2);
+            }
+            definition::Instruction::Load(val1, val2) => {
+                self.collect_val(val1);
+                self.collect_val(val2);
+            }
+            definition::Instruction::AddPtr { ptr, index, dst, .. } => {
+                self.collect_val(ptr);
+                self.collect_val(index);
+                self.collect_val(dst);
+            }
             definition::Instruction::Jump(_) |
             definition::Instruction::Label(_) => {}
         }
@@ -51,7 +69,7 @@ impl Collector {
     fn collect_val(&mut self, val: &definition::Val) {
         match val {
             definition::Val::Var(name) => {
-                let ty = definition::Type::I32;
+                let ty = self.frontend_symbol_table.get(name).unwrap().ty.clone();
 
                 self.variables.insert((name.clone(), ty));
             }

@@ -70,6 +70,14 @@ pub enum Keyword {
     It,
     Take,
     Parameters,
+    Get,
+    Address,
+    Of,
+    What,
+    Pointing,
+    At,
+    ArrayStart,
+    ArrayEnd,
 }
 
 impl ToString for Keyword {
@@ -106,6 +114,14 @@ impl ToString for Keyword {
             Keyword::It => "it",
             Keyword::Take => "take",
             Keyword::Parameters => "parameters",
+            Keyword::Get => "get",
+            Keyword::Address => "address",
+            Keyword::Of => "of",
+            Keyword::What => "what",
+            Keyword::Pointing => "pointing",
+            Keyword::At => "at",
+            Keyword::ArrayStart => "array_start",
+            Keyword::ArrayEnd => "array_end",
         }.to_string()
     }
 }
@@ -221,6 +237,14 @@ impl<'a> Lexer<'a> {
                     "it" => TokenKind::Keyword(Keyword::It),
                     "take" => TokenKind::Keyword(Keyword::Take),
                     "parameters" => TokenKind::Keyword(Keyword::Parameters),
+                    "get" => TokenKind::Keyword(Keyword::Get),
+                    "address" => TokenKind::Keyword(Keyword::Address),
+                    "of" => TokenKind::Keyword(Keyword::Of),
+                    "what" => TokenKind::Keyword(Keyword::What),
+                    "pointing" => TokenKind::Keyword(Keyword::Pointing),
+                    "at" => TokenKind::Keyword(Keyword::At),
+                    "array_start" => TokenKind::Keyword(Keyword::ArrayStart),
+                    "array_end" => TokenKind::Keyword(Keyword::ArrayEnd),
 
                     "left_bracket" => TokenKind::LBracket,
                     "right_bracket" => TokenKind::RBracket,

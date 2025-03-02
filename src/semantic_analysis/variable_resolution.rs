@@ -36,7 +36,7 @@ impl Analyzer {
     fn preanalyze_function(&mut self, function: &nodes::FunctionDefinition) -> Result<(), errors::Error> {
         self.var_map.insert(function.name.clone(), VarMapEntry { ty: nodes::Type::Function(function.params.iter().map(|(_, ty)| ty.clone()).collect(), Box::new(function.return_type.clone())) });
 
-        if function.name.len() > 4 {
+        if function.name.len() > 4 && function.body.is_some() {
             return Err(errors::Error::new(errors::ErrorKind::LongFuncName(function.name.clone()), function.line_started));
         }
 
@@ -51,13 +51,13 @@ impl Analyzer {
             self.variables_this_function += 1;
         }
 
-        let new_block = self.analyze_block(function.body)?;
+        let new_block = if let Some(body) = function.body { Some(self.analyze_block(body)?) } else {None};
 
-        if self.variables_this_function == 1 {
+        if self.variables_this_function == 1 && new_block.is_some() {
             return Err(errors::Error::new(errors::ErrorKind::LonelyVariable, function.line_started));
         }
 
-        if self.variables_this_function >= 10 {
+        if self.variables_this_function >= 10 && new_block.is_some() {
             return Err(errors::Error::new(errors::ErrorKind::PackedFunc(self.variables_this_function), function.line_started));
         }
 
@@ -189,15 +189,6 @@ impl Analyzer {
                 let new_left = self.analyze_expression(*left)?;
                 let new_right = self.analyze_expression(*right)?;
 
-                match new_left.kind {
-                    nodes::ExpressionKind::Variable(ref name) => {
-                        if !self.var_map.contains_key(name) {
-                            return Err(errors::Error::new(errors::ErrorKind::VariableNotDeclared(name.clone()), expression.line_started));
-                        }
-                    }
-                    _ => return Err(errors::Error::new(errors::ErrorKind::InvalidAssignmentTarget, expression.line_started)),
-                }
-
                 Ok(nodes::Expression {
                     kind: nodes::ExpressionKind::Assign(Box::new(new_left), Box::new(new_right)),
                     line_started: expression.line_started,
@@ -222,6 +213,34 @@ impl Analyzer {
 
                 Ok(nodes::Expression {
                     kind: nodes::ExpressionKind::FunctionCall(name, new_args),
+                    line_started: expression.line_started,
+                    ty: expression.ty,
+                })
+            }
+            nodes::ExpressionKind::AddressOf(expr) => {
+                let new_expr = self.analyze_expression(*expr)?;
+
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::AddressOf(Box::new(new_expr)),
+                    line_started: expression.line_started,
+                    ty: expression.ty,
+                })
+            }
+            nodes::ExpressionKind::Dereference(expr) => {
+                let new_expr = self.analyze_expression(*expr)?;
+
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::Dereference(Box::new(new_expr)),
+                    line_started: expression.line_started,
+                    ty: expression.ty,
+                })
+            }
+            nodes::ExpressionKind::Subscript(left, right) => {
+                let new_left = self.analyze_expression(*left)?;
+                let new_right = self.analyze_expression(*right)?;
+
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::Subscript(Box::new(new_left), Box::new(new_right)),
                     line_started: expression.line_started,
                     ty: expression.ty,
                 })

@@ -1,3 +1,5 @@
+#![feature(box_patterns)]
+
 use rand::Rng;
 
 mod formatting;
@@ -24,13 +26,13 @@ fn compile(input: &str, output_file: &str) -> Result<(), errors::Error> {
 
     //println!("{:#?}", program);
 
-    let mut ir_generator = ir::IRGenerator::new();
+    let mut ir_generator = ir::IRGenerator::new(symbol_table);
     let program = ir_generator.generate_ir(program)?;
 
     //println!("{:#?}", program);
 
     let context = llvm_gen::LLVMGenerator::create_context();
-    let llvm_gen = llvm_gen::LLVMGenerator::new(&context, &symbol_table);
+    let llvm_gen = llvm_gen::LLVMGenerator::new(&context, &ir_generator.symbol_table);
     llvm_gen.generate(program, output_file);
 
     Ok(())

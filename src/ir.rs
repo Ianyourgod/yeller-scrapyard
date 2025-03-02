@@ -2,37 +2,48 @@ pub mod definition;
 
 use crate::parser::nodes;
 use crate::errors;
+use crate::semantic_analysis::typecheck::{STEntry, SymbolTable};
 
 pub struct IRGenerator {
     tmp_counter: u64,
+    pub symbol_table: SymbolTable,
 }
 
 impl IRGenerator {
-    pub fn new() -> Self {
-        Self { tmp_counter: 0 }
+    pub fn new(symbol_table: SymbolTable) -> Self {
+        Self { tmp_counter: 0, symbol_table }
     }
 
     pub fn generate_ir(&mut self, program: nodes::Program) -> Result<definition::Program, errors::Error> {
         let mut functions = Vec::new();
         
         for function in program.functions {
-            functions.push(self.generate_function(function)?);
+            let function = self.generate_function(function)?;
+            if let Some(function) = function {
+                functions.push(function);
+            }
         }
 
         Ok(definition::Program { functions })
     }
 
-    fn generate_function(&mut self, function: nodes::FunctionDefinition) -> Result<definition::Function, errors::Error> {
+    fn generate_function(&mut self, function: nodes::FunctionDefinition) -> Result<Option<definition::Function>, errors::Error> {
         let mut body = Vec::new();
 
-        self.generate_block(function.body, &mut body)?;
+        let block = if let Some(body) = function.body {
+            body
+        } else {
+            return Ok(None);
+        };
 
-        Ok(definition::Function {
+        self.generate_block(block, &mut body)?;
+
+        Ok(Some(definition::Function {
             name: function.name,
             params: function.params,
             return_type: function.return_type,
             body,
-        })
+        }))
     }
 
     fn generate_block(&mut self, block: nodes::Block, body: &mut Vec<definition::Instruction>) -> Result<(), errors::Error> {
@@ -110,7 +121,7 @@ impl IRGenerator {
                 let left = self.generate_expression(*left, body)?;
                 let right = self.generate_expression(*right, body)?;
 
-                let dst = definition::Val::Var(self.new_tmp());
+                let dst = self.new_tmp_var(expression.ty.clone());
                 let kind = match op {
                     nodes::Binop::Add => definition::Binop::Add,
                     nodes::Binop::Sub => definition::Binop::Sub,
@@ -133,20 +144,44 @@ impl IRGenerator {
             nodes::ExpressionKind::Assign(left, right) => {
                 let right = self.generate_expression(*right, body)?;
                 let left = match left.kind {
-                    nodes::ExpressionKind::Variable(name) => definition::Val::Var(name),
+                    nodes::ExpressionKind::Variable(name) => {
+                        let var = definition::Val::Var(name);
+                        body.push(definition::Instruction::Copy {
+                            src: right,
+                            dst: var.clone(),
+                        });
+                        var
+                    }
+                    nodes::ExpressionKind::Dereference(expr) => {
+                        let addr = self.generate_expression(*expr, body)?;
+                        body.push(definition::Instruction::Store(right, addr.clone()));
+                        addr
+                    }
+                    nodes::ExpressionKind::Subscript(expr, index) => {
+                        let ty = match &expr.ty {
+                            nodes::Type::Pointer(ty) => (**ty).clone(),
+                            _ => unreachable!(),
+                        };
+                        let expr = self.generate_expression(*expr, body)?;
+                        let index = self.generate_expression(*index, body)?;
+
+                        let addr = self.new_tmp_var(nodes::Type::Pointer(Box::new(ty)));
+                        body.push(definition::Instruction::AddPtr {
+                            ptr: expr,
+                            index,
+                            dst: addr.clone(),
+                        });
+                        body.push(definition::Instruction::Store(right, addr.clone()));
+                        addr
+                    }
                     _ => unreachable!(),
                 };
-
-                body.push(definition::Instruction::Copy {
-                    src: right,
-                    dst: left.clone(),
-                });
 
                 Ok(left)
             }
             nodes::ExpressionKind::IsZero(expr) => {
                 let val = self.generate_expression(*expr, body)?;
-                let dst = definition::Val::Var(self.new_tmp());
+                let dst = self.new_tmp_var(expression.ty.clone());
 
                 body.push(definition::Instruction::Binary {
                     op: definition::Binop::Equal,
@@ -159,14 +194,49 @@ impl IRGenerator {
             }
             nodes::ExpressionKind::FunctionCall(name, args) => {
                 let args = args.into_iter().map(|arg| self.generate_expression(arg, body)).collect::<Result<Vec<_>, _>>()?;
-                let dst = definition::Val::Var(self.new_tmp());
+                let dst = self.new_tmp_var(expression.ty.clone());
 
                 body.push(definition::Instruction::FunctionCall(name, args, dst.clone()));
 
                 Ok(dst)
             }
+            nodes::ExpressionKind::AddressOf(expr) => {
+                let val = self.generate_expression(*expr, body)?;
+                let dst = self.new_tmp_var(expression.ty.clone());
+
+                body.push(definition::Instruction::GetAddress(val, dst.clone()));
+
+                Ok(dst)
+            }
+            nodes::ExpressionKind::Dereference(expr) => {
+                let val = self.generate_expression(*expr, body)?;
+                let dst = self.new_tmp_var(expression.ty.clone());
+
+                body.push(definition::Instruction::Load(val, dst.clone()));
+
+                Ok(dst)
+            }
+            nodes::ExpressionKind::Subscript(expr, index) => {
+                let expr = self.generate_expression(*expr, body)?;
+                let index = self.generate_expression(*index, body)?;
+                let dst = self.new_tmp_var(expression.ty.clone());
+
+                body.push(definition::Instruction::AddPtr {
+                    ptr: expr,
+                    index,
+                    dst: dst.clone(),
+                });
+
+                Ok(dst)
+            }
             nodes::ExpressionKind::Variable(name) => Ok(definition::Val::Var(name)),
         }
+    }
+
+    fn new_tmp_var(&mut self, ty: nodes::Type) -> definition::Val {
+        let name = self.new_tmp();
+        self.symbol_table.insert(name.clone(), STEntry { ty });
+        definition::Val::Var(name)
     }
 
     fn new_tmp(&mut self) -> String {

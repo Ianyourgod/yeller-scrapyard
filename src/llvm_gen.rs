@@ -18,6 +18,37 @@ pub struct LLVMGenerator<'a> {
     frontend_symbol_table: &'a SymbolTable,
 }
 
+fn __ty_to_llvm_ty<'a>(ctx: &'a inkwell::context::Context, ty: &definition::Type) -> inkwell::types::BasicTypeEnum<'a> {
+    match ty {
+        definition::Type::I32 => ctx.i32_type().as_basic_type_enum(),
+        definition::Type::Pointer(box inner_ty) => {
+            let inner_ty = __ty_to_llvm_ty(ctx, inner_ty);
+            inner_ty.ptr_type(inkwell::AddressSpace::from(0)).as_basic_type_enum()
+        }
+        definition::Type::Function(_, _) => unreachable!(),
+    }
+}
+
+#[allow(dead_code)]
+pub fn sizeof_type(t: &definition::Type) -> u64 {
+    Target::initialize_all(&InitializationConfig::default());
+    let target = Target::from_triple(&TargetMachine::get_default_triple()).unwrap();
+    let target_machine = target
+        .create_target_machine(
+            &TargetMachine::get_default_triple(),
+            "generic",
+            "",
+            OptimizationLevel::Aggressive,
+            RelocMode::Default,
+            inkwell::targets::CodeModel::Default,
+        )
+        .unwrap();
+    let target_data = target_machine.get_target_data();
+    // generate a ctx temporarily
+    let ctx = Context::create();
+    target_data.get_abi_size(&__ty_to_llvm_ty(&ctx, t))
+}
+
 impl<'a> LLVMGenerator<'a> {
     pub fn create_context() -> Context {
         Context::create()
@@ -108,11 +139,11 @@ impl<'a> LLVMGenerator<'a> {
             definition::Type::U32 => self.context.i32_type().as_basic_type_enum(),
             definition::Type::U64 => self.context.i64_type().as_basic_type_enum(),
             definition::Type::F64 => self.context.f64_type().as_basic_type_enum(),
-            definition::Type::Box(box inner_ty) |
-            definition::Type::Reference(box inner_ty, _) => {
+            definition::Type::Box(box inner_ty) |*/
+            definition::Type::Pointer(box inner_ty) => {
                 let inner_ty = self.ty_to_llvm_ty(inner_ty);
                 inner_ty.ptr_type(inkwell::AddressSpace::from(0)).as_basic_type_enum()
-            }*/
+            }
             definition::Type::Function(_, _) => unreachable!(),
         }
     }
@@ -123,14 +154,14 @@ impl<'a> LLVMGenerator<'a> {
             /*definition::Type::I64 => inkwell::types::BasicMetadataTypeEnum::IntType(self.context.i64_type()),
             definition::Type::U32 => inkwell::types::BasicMetadataTypeEnum::IntType(self.context.i32_type()),
             definition::Type::U64 => inkwell::types::BasicMetadataTypeEnum::IntType(self.context.i64_type()),
-            definition::Type::F64 => inkwell::types::BasicMetadataTypeEnum::FloatType(self.context.f64_type()),
+            definition::Type::F64 => inkwell::types::BasicMetadataTypeEnum::FloatType(self.context.f64_type()),*/
 
-            definition::Type::Box(box inner_ty) |
-            definition::Type::Reference(box inner_ty, _) => {
+            /*definition::Type::Box(box inner_ty) |*/
+            definition::Type::Pointer(box inner_ty) => {
                 // turn the inner_ty into a inkwell::types::PointerType
                 let inner_ty = self.ty_to_llvm_ty(inner_ty);
                 inkwell::types::BasicMetadataTypeEnum::PointerType(inner_ty.ptr_type(inkwell::AddressSpace::from(0)))
-            }*/
+            }
 
             definition::Type::Function(_, _) => unreachable!(),
         }
@@ -153,7 +184,7 @@ impl<'a> LLVMGenerator<'a> {
     }
 
     fn generate_function(&mut self, ir_function: definition::Function) {
-        let mut var_collector = var_collecter::Collector::new();
+        let mut var_collector = var_collecter::Collector::new(&self.frontend_symbol_table);
         var_collector.collect_function(&ir_function);
         let variables = var_collector.variables;
 
@@ -367,6 +398,40 @@ impl<'a> LLVMGenerator<'a> {
                 let dest_val = self.get_ptr_from_val(dst);
                 let result = builder.build_call(function, &arg_vals, "call").expect("uh oh");
                 builder.build_store(dest_val, result.try_as_basic_value().left().unwrap()).expect("uh oh");
+            }
+            definition::Instruction::GetAddress(src, dest, ..) => {
+                // get address of src and store it in dest
+                let ptr = *match src {
+                    definition::Val::Var(name) => self.symbol_table.get(&name).expect("Variable not found"),
+                    definition::Val::Number(_) => panic!("uh oh")
+                };
+                let dest_val = self.get_ptr_from_val(dest);
+
+                builder.build_store(dest_val, ptr).expect("uh oh");
+            }
+            definition::Instruction::Load(src_ptr, dest) => {
+                let src_ptr_val = self.val_to_base(src_ptr, builder);
+                let dest_val = self.get_ptr_from_val(dest);
+                let result = builder.build_load(src_ptr_val.into_pointer_value(), "load").expect("uh oh");
+                builder.build_store(dest_val, result).expect("uh oh");
+            }
+            definition::Instruction::Store(src, dest_ptr) => {
+                println!("{:?} <- {:?}", dest_ptr, src);
+                let src_val = self.val_to_base(src, builder);
+                let dest_ptr_val = self.val_to_base(dest_ptr, builder);
+                builder.build_store(dest_ptr_val.into_pointer_value(), src_val).expect("uh oh");
+            }
+            definition::Instruction::AddPtr { ptr, index, dst } => {
+                let ptr_val = self.val_to_base(ptr.clone(), builder);
+                let index_val = self.val_to_base(index, builder);
+                let dest_val = self.get_ptr_from_val(dst); 
+                
+                let ptr_val = ptr_val.into_pointer_value();
+
+                println!("{:?}", ptr);
+
+                let result = unsafe { builder.build_gep(ptr_val, &[index_val.into_int_value()], "addptr").expect("uh oh") };
+                builder.build_store(dest_val, result).expect("uh oh");
             }
         }
     }

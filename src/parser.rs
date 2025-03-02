@@ -59,6 +59,11 @@ impl<'a> Parser<'a> {
                 self.next()?;
                 Ok(nodes::Type::I32)
             }
+            TokenKind::Keyword(Keyword::Pointing) => {
+                self.next()?;
+                self.expect_keyword(Keyword::At)?;
+                Ok(nodes::Type::Pointer(Box::new(self.parse_type()?)))
+            }
             _ => Err(errors::Error::new(errors::ErrorKind::UnexpectedToken {
                 expected: "a type".to_string(),
                 found: self.current_token.kind.to_string(),
@@ -130,7 +135,11 @@ impl<'a> Parser<'a> {
             }
         }
         self.expect(TokenKind::RBracket)?;
-        let body = self.parse_block()?;
+
+        let body = if self.current_token.kind == TokenKind::Semicolon {
+            self.next()?;
+            None
+        } else { Some(self.parse_block()?) };
         Ok(nodes::FunctionDefinition {
             name,
             params,
@@ -153,7 +162,13 @@ impl<'a> Parser<'a> {
 
     fn parse_block_item(&mut self) -> Result<nodes::BlockItem, errors::Error> {
         match self.current_token.kind {
-            TokenKind::Keyword(Keyword::I) => self.parse_declaration().map(nodes::BlockItem::Declaration),
+            TokenKind::Keyword(Keyword::I) => {
+                if self.peek()?.kind == TokenKind::Keyword(Keyword::Am) {
+                    self.parse_declaration().map(nodes::BlockItem::Declaration)
+                } else {
+                    self.parse_statement().map(nodes::BlockItem::Statement)
+                }
+            },
             _ => self.parse_statement().map(nodes::BlockItem::Statement),
         }
     }
@@ -181,7 +196,9 @@ impl<'a> Parser<'a> {
         self.expect_keyword(Keyword::Be)?;
         self.expect_keyword(Keyword::Equal)?;
         self.expect_keyword(Keyword::To)?;
+
         let value = self.parse_expression(0)?;
+
         self.expect(TokenKind::Keyword(Keyword::Period))?;
         Ok(nodes::Declaration { name, ty, value, line_started })
     }
@@ -312,6 +329,16 @@ impl<'a> Parser<'a> {
                     inner
                 }
             }
+            TokenKind::Keyword(Keyword::ArrayStart) => {
+                self.next()?;
+                let index = self.parse_expression(0)?;
+                self.expect(TokenKind::Keyword(Keyword::ArrayEnd))?;
+                nodes::Expression {
+                    kind: nodes::ExpressionKind::Subscript(Box::new(inner), Box::new(index)),
+                    line_started,
+                    ty: nodes::Type::I32
+                }
+            }
             _ => inner,
         })
     }
@@ -373,6 +400,32 @@ impl<'a> Parser<'a> {
                 Ok(nodes::Expression {
                     kind: nodes::ExpressionKind::FunctionCall(fun_name, args),
                     line_started: line_started,
+                    ty: nodes::Type::I32
+                })
+            }
+            TokenKind::Keyword(Keyword::Get) => {
+                let line_started = self.current_token.line;
+                self.next()?;
+                self.expect_keyword(Keyword::The)?;
+                self.expect_keyword(Keyword::Address)?;
+                self.expect_keyword(Keyword::Of)?;
+                let expr = self.parse_inner_factor()?;
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::AddressOf(Box::new(expr)),
+                    line_started,
+                    ty: nodes::Type::I32
+                })
+            }
+            TokenKind::Keyword(Keyword::What) => {
+                let line_started = self.current_token.line;
+                self.next()?;
+                let expr = self.parse_inner_factor()?;
+                self.expect_keyword(Keyword::Is)?;
+                self.expect_keyword(Keyword::Pointing)?;
+                self.expect_keyword(Keyword::At)?;
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::Dereference(Box::new(expr)),
+                    line_started,
                     ty: nodes::Type::I32
                 })
             }
