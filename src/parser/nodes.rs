@@ -59,6 +59,7 @@ pub enum ExpressionKind {
     Number(u64),
     Binary(Binop, Box<Expression>, Box<Expression>),
     Variable(String),
+    Assign(Box<Expression>, Box<Expression>),
 }
 
 #[derive(Debug, Clone)]

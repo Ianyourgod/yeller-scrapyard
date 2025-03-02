@@ -118,6 +118,20 @@ impl IRGenerator {
 
                 Ok(dst)
             }
+            nodes::ExpressionKind::Assign(left, right) => {
+                let right = self.generate_expression(*right, body)?;
+                let left = match left.kind {
+                    nodes::ExpressionKind::Variable(name) => definition::Val::Var(name),
+                    _ => unreachable!(),
+                };
+
+                body.push(definition::Instruction::Copy {
+                    src: right,
+                    dst: left.clone(),
+                });
+
+                Ok(left)
+            }
             nodes::ExpressionKind::Variable(name) => Ok(definition::Val::Var(name)),
         }
     }

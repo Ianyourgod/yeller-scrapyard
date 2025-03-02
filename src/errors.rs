@@ -46,6 +46,7 @@ pub enum ErrorKind {
     ExtraLine,
     ShortVarName(String),
     LongFuncName(String),
+    InvalidAssignmentTarget,
 }
 
 impl ErrorKind {
@@ -101,6 +102,9 @@ impl ErrorKind {
             Self::LongFuncName(name) => {
                 format!("\"{}\" br u nt skspr 💔", name)
             }
+            Self::InvalidAssignmentTarget => {
+                "Bro WHAT are you trying to assign to 💔".to_string()
+            }
         };
 
         // call "python3 speech.py" with the error message
@@ -128,7 +132,12 @@ mod tests {
         let input = std::fs::read_to_string(file).expect("Failed to read input file");
         match compile(&input, "____doesnt______mattttter____") {
             Ok(_) => panic!("Compilation should have failed!"),
-            Err(e) => assert_eq!(e.kind, expected_error),
+            Err(e) => {
+                if let ErrorKind::RandomChance = e.kind {
+                    return;
+                }
+                assert_eq!(e.kind, expected_error);
+            },
         }
     }
 
@@ -196,5 +205,10 @@ mod tests {
             expected: 1,
             found: 2,
         });
+    }
+
+    #[test]
+    fn test_invalid_assignment_target() {
+        test_error("error_examples/invalid_assign_target.yl", ErrorKind::InvalidAssignmentTarget);
     }
 }

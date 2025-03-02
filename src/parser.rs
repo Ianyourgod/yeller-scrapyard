@@ -177,7 +177,7 @@ impl<'a> Parser<'a> {
         self.expect_keyword(Keyword::Equal)?;
         self.expect_keyword(Keyword::To)?;
         let value = self.parse_expression(0)?;
-        self.expect(TokenKind::Semicolon)?;
+        self.expect(TokenKind::Keyword(Keyword::Period))?;
         Ok(nodes::Declaration { name, ty, value, line_started })
     }
 
@@ -187,7 +187,7 @@ impl<'a> Parser<'a> {
             TokenKind::Keyword(Keyword::Return) => {
                 self.next()?;
                 let expr = self.parse_expression(0)?;
-                self.expect(TokenKind::Semicolon)?;
+                self.expect(TokenKind::Keyword(Keyword::Period))?;
                 nodes::Statement { kind: nodes::StatementKind::Return(expr), line_started }
             }
             TokenKind::Keyword(Keyword::In) => {
@@ -213,7 +213,7 @@ impl<'a> Parser<'a> {
             }
             _ => {
                 let expr = self.parse_expression(0)?;
-                self.expect(TokenKind::Semicolon)?;
+                self.expect(TokenKind::Keyword(Keyword::Period))?;
                 nodes::Statement { kind: nodes::StatementKind::Expression(expr), line_started }
             }
         })
@@ -223,18 +223,8 @@ impl<'a> Parser<'a> {
         match kind {
             TokenKind::Mul | TokenKind::Div | TokenKind::Mod => 50,
             TokenKind::Plus | TokenKind::Minus => 45,
+            TokenKind::Keyword(Keyword::Shall) => 1,
             _ => -1,
-        }
-    }
-
-    fn token_to_binop(&self, kind: &TokenKind) -> nodes::Binop {
-        match kind {
-            TokenKind::Plus => nodes::Binop::Add,
-            TokenKind::Minus => nodes::Binop::Sub,
-            TokenKind::Mul => nodes::Binop::Mul,
-            TokenKind::Div => nodes::Binop::Div,
-            TokenKind::Mod => nodes::Binop::Mod,
-            _ => unreachable!(),
         }
     }
 
@@ -243,12 +233,37 @@ impl<'a> Parser<'a> {
 
         let mut prec = self.get_prec(&self.current_token.kind);
         while prec >= min_prec {
-            let op = self.token_to_binop(&self.current_token.kind);
+            let line_started = left.line_started;
+            let op = match &self.current_token.kind {
+                TokenKind::Plus => nodes::Binop::Add,
+                TokenKind::Minus => nodes::Binop::Sub,
+                TokenKind::Mul => nodes::Binop::Mul,
+                TokenKind::Div => nodes::Binop::Div,
+                TokenKind::Mod => nodes::Binop::Mod,
+                TokenKind::Keyword(Keyword::Shall) => {
+                    self.next()?;
+                    self.expect_keyword(Keyword::Now)?;
+                    self.expect_keyword(Keyword::Be)?;
+                    self.expect_keyword(Keyword::Equal)?;
+                    self.expect_keyword(Keyword::To)?;
+
+                    let right = self.parse_expression(prec)?;
+
+                    left = nodes::Expression {
+                        kind: nodes::ExpressionKind::Assign(Box::new(left), Box::new(right)),
+                        line_started,
+                    };
+
+                    prec = self.get_prec(&self.current_token.kind);
+                    continue;
+                }
+                _ => unreachable!("{:?} {} {}", self.current_token.kind, min_prec, prec),
+            };
+
             self.next()?;
 
             let right = self.parse_expression(prec + 1)?;
 
-            let line_started = left.line_started;
             left = nodes::Expression {
                 kind: nodes::ExpressionKind::Binary(op, Box::new(left), Box::new(right)),
                 line_started,

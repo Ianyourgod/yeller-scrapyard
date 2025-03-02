@@ -59,6 +59,8 @@ pub enum Keyword {
     A,
     Variable,
     Named,
+    Now,
+    Period,
 }
 
 impl ToString for Keyword {
@@ -71,7 +73,7 @@ impl ToString for Keyword {
             Keyword::Be => "be".to_string(),
             Keyword::Equal => "equal".to_string(),
             Keyword::To => "to".to_string(),
-            Keyword::I32 => "integer thirty two".to_string(),
+            Keyword::I32 => "integer meaning whole in latin with exactly thirty two bits".to_string(),
             Keyword::Return => "return".to_string(),
             Keyword::In => "in".to_string(),
             Keyword::The => "the".to_string(),
@@ -85,6 +87,8 @@ impl ToString for Keyword {
             Keyword::A => "a".to_string(),
             Keyword::Variable => "variable".to_string(),
             Keyword::Named => "named".to_string(),
+            Keyword::Now => "now".to_string(),
+            Keyword::Period => "period".to_string(),
         }
     }
 }
@@ -190,6 +194,8 @@ impl<'a> Lexer<'a> {
                     "a" => TokenKind::Keyword(Keyword::A),
                     "variable" => TokenKind::Keyword(Keyword::Variable),
                     "named" => TokenKind::Keyword(Keyword::Named),
+                    "period" => TokenKind::Keyword(Keyword::Period),
+                    "now" => TokenKind::Keyword(Keyword::Now),
 
                     "left_bracket" => TokenKind::LBracket,
                     "right_bracket" => TokenKind::RBracket,

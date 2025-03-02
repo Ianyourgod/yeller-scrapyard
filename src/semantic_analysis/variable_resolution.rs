@@ -166,6 +166,24 @@ impl Analyzer {
                     line_started: expression.line_started,
                 })
             }
+            nodes::ExpressionKind::Assign(left, right) => {
+                let new_left = self.analyze_expression(*left)?;
+                let new_right = self.analyze_expression(*right)?;
+
+                match new_left.kind {
+                    nodes::ExpressionKind::Variable(ref name) => {
+                        if !self.var_map.contains_key(name) {
+                            return Err(errors::Error::new(errors::ErrorKind::VariableNotDeclared(name.clone()), expression.line_started));
+                        }
+                    }
+                    _ => return Err(errors::Error::new(errors::ErrorKind::InvalidAssignmentTarget, expression.line_started)),
+                }
+
+                Ok(nodes::Expression {
+                    kind: nodes::ExpressionKind::Assign(Box::new(new_left), Box::new(new_right)),
+                    line_started: expression.line_started,
+                })
+            }
         }
     }
 }
