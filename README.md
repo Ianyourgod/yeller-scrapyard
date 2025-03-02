@@ -1,8 +1,8 @@
 # Yeller
 
-Ever felt old? Well yeller is for you! Yeller enforces set rules and has innovative syntax, allowing for quicker reading and understanding of code, such as:
+Ever felt old? Well then, yeller is for you! Yeller enforces set rules and has innovative syntax, allowing for quicker reading and understanding of code, such as:
 
-- a maxmium of 4 letter long variable names
+- a maxmium of 4 letter long function names
 - a 1/5 chance your program will fail to compile
 - lonely variables
 - etc.
