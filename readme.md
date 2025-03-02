@@ -48,13 +48,13 @@ the function numbered 2 is integer_meaning_whole_in_latin_with_exactly_thirty_tw
 Fibonacci:
 
 ```text
-the funshun numbered 1 is integer_meaning_whole_in_latin_with_exactly_thirty_two_bits shall be equal to main left_bracket right_bracket left_parenthesis
-return i shall invoke the funshun named fib and it shall take the parameters left_brace 5 right_brace period
+the function numbered 1 is integer_meaning_whole_in_latin_with_exactly_thirty_two_bits shall be equal to main left_bracket right_bracket left_parenthesis
+return i shall invoke the function named fib and it shall take the parameters left_brace 5 right_brace period
 right_parenthesis
-the funshun numbered 2 is integer_meaning_whole_in_latin_with_exactly_thirty_two_bits shall be equal to fib left_bracket count is integer_meaning_whole_in_latin_with_exactly_thirty_two_bits right_bracket left_parenthesis
+the function numbered 2 is integer_meaning_whole_in_latin_with_exactly_thirty_two_bits shall be equal to fib left_bracket count is integer_meaning_whole_in_latin_with_exactly_thirty_two_bits right_bracket left_parenthesis
 i am declaring a variable named friendly is integer_meaning_whole_in_latin_with_exactly_thirty_two_bits shall be equal to 0 period
 in the case that count is zero do return 1 period
 in the case that left_brace count minus 1 right_brace is zero do return 1 period
-return i shall invoke the funshun named fib and it shall take the parameters left_brace count minus 1 right_brace plus i shall invoke the funshun named fib and it shall take the parameters left_brace count minus 2 right_brace period
+return i shall invoke the function named fib and it shall take the parameters left_brace count minus 1 right_brace plus i shall invoke the function named fib and it shall take the parameters left_brace count minus 2 right_brace period
 right_parenthesis
 ```
